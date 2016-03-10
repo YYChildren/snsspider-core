@@ -27,7 +27,7 @@ public class WebDriverWrapper{
 	public RemoteWebDriver getWebDriver() {
 		return webDriver;
 	}
-	public void setWebDriver(RemoteWebDriver webDriver) {
+	void setWebDriver(RemoteWebDriver webDriver) {
 		this.webDriver = webDriver;
 	}
 	public synchronized CookieSnsStore getCookieStore() {

@@ -7,81 +7,90 @@ import java.util.Queue;
 
 import javax.persistence.Entity;
 
-import com.mingchao.snsspider.model.QueueStatus;
-import com.mingchao.snsspider.model.ToBytes;
+import com.google.common.hash.BloomFilter;
+import com.google.common.hash.Funnel;
+import com.mingchao.snsspider.exception.NPInterruptedException;
 import com.mingchao.snsspider.model.IdAble;
+import com.mingchao.snsspider.model.QueueStatus;
 import com.mingchao.snsspider.storage.Storage;
 import com.mingchao.snsspider.storage.StorageJdbcSington;
-import com.mingchao.snsspider.util.BloomFilter;
+import com.mingchao.snsspider.util.BloomFilterUtil;
 
-public class ScheduleJdbc <T extends ToBytes> extends ScheduleImpl <T>{
-
-	protected static long EXPECTEDENTRIES = 50000000;
+public class ScheduleJdbc<T  extends IdAble> extends ScheduleImpl<T> {
+	
 	protected static int STEP = 1000;
 	protected Queue<T> queue;
-	protected BloomFilter filter;
 	protected Storage storage;
-	protected boolean waiting; 
-	protected Class<T> entryClass;
+	protected boolean waiting;
 	protected String entryKey;
-
-	public ScheduleJdbc(Class<T> entryClass){
-		this(entryClass,EXPECTEDENTRIES);
-	}
 	
-	public ScheduleJdbc(Class<T> entryClass,long expectedEntries) {
+	public ScheduleJdbc(Class<T> entryClass,  Funnel<T> funnel) {
+		this(entryClass, funnel, BloomFilterUtil.EXPECTEDENTRIES);
+	}
+
+	public ScheduleJdbc(Class<T> entryClass, Funnel<T> funnel, long expectedEntries) {
+		this(entryClass, funnel, expectedEntries, BloomFilterUtil.DEFAULT_FPP);
+	}
+
+	public ScheduleJdbc(Class<T> entryClass,  Funnel<T> funnel, long expectedEntries, double fpp) {
+		this(entryClass, funnel, expectedEntries, fpp, null);
+	}
+
+	public ScheduleJdbc(Class<T> entryClass,  Funnel<T> funnel, long expectedEntries, double fpp,
+			String bloomPath) {
 		queue = new LinkedList<T>();
-		filter = new BloomFilter(expectedEntries);
-		waiting = false; 
 		this.entryClass = entryClass;
-		this.entryKey =  getTableName(entryClass);
+		this.entryKey = getTableName(entryClass);
+		this.bloomPath = bloomPath;
+		this.filter = BloomFilter.create(funnel, expectedEntries, fpp);
+		waiting = false;
 		setStorage();
 	}
-	
-	protected void setStorage(){
+
+	protected void setStorage() {
 		this.storage = StorageJdbcSington.getInstance();
 	}
-	
-	public synchronized boolean containsKey(T e){
-		byte[] bytes = e.toBytes();
-		return filter.test(bytes);
+
+	public synchronized boolean containsKey(T e) {
+		return filter.mightContain(e);
 	}
 
 	public synchronized void schadule(List<T> list) {
 		boolean hasNew = false;
 		List<T> list2 = new ArrayList<T>();
 		for (T e : list) {
-			byte[] bytes = e.toBytes();
-			if (!filter.test(bytes)) {
+			if (!filter.mightContain(e)) {
+				filter.put(e);
 				list2.add(e);
 				hasNew = true;
 			}
 		}
 		storage.insertIgnore(list2);
-		if(hasNew && waiting){
+		if (hasNew && waiting) {
 			waiting = false;
 			notify();
 		}
 	}
-	
+
 	public synchronized void schadule(T e) {
 		boolean hasNew = false;
-		byte[] bytes = e.toBytes();
-		if (!filter.test(bytes)) {
+		if (!filter.mightContain(e)) {
+			filter.put(e);
 			storage.insertIgnore(e);
 			hasNew = true;
+		}else{
+			log.debug("not schedule: " + e.getClass() + ":" + e.toString());
 		}
-		if(hasNew && waiting){
+		if (hasNew && waiting) {
 			waiting = false;
 			notify();
 		}
 	}
 
 	public synchronized void reschadule(T e) {
-		byte[] bytes = e.toBytes();
-		filter.add(bytes);
+		filter.put(e);
 		storage.insertIgnore(e);
-		if(waiting){
+		if (waiting) {
 			waiting = false;
 			notify();
 		}
@@ -90,60 +99,67 @@ public class ScheduleJdbc <T extends ToBytes> extends ScheduleImpl <T>{
 	@SuppressWarnings("unchecked")
 	public synchronized T fetch() {
 		T e;
-		while(true){
-			log.info(queue.getClass().getSimpleName() + " size: " + queue.size());
+		while (true) {
+			log.info(entryClass.getSimpleName() + " size: " + queue.size());
 			e = (T) queue.poll();
-			if(e == null){
-				QueueStatus queueStatus = (QueueStatus) storage.get(QueueStatus.class, entryKey);//获取进度
-				if(queueStatus == null){
+			if (e == null) {
+				QueueStatus queueStatus = (QueueStatus) storage.get(
+						QueueStatus.class, entryKey);// 获取进度
+				if (queueStatus == null) {
 					queueStatus = new QueueStatus();
 					queueStatus.setTableName(entryKey);
 					queueStatus.setIdStart(1L);
 				}
 				Long idStart = queueStatus.getIdStart();
 				Long idEnd = idStart + STEP;
-				List<Object>  list = storage.get(entryClass, idStart, idEnd);
-				log.info("idStart: "+ idStart);
-				if(!(list == null || list.isEmpty())){
+				List<Object> list = storage.get(entryClass, idStart, idEnd);
+				log.debug("idStart: " + idStart);
+				if (!(list == null || list.isEmpty())) {
 					for (Object newEntry : list) {
-						queue.offer((T)newEntry);
+						queue.offer((T) newEntry);
 					}
-					idEnd = ((IdAble)list.get(list.size() - 1)).getId() + 1;
-					storage.delete(entryClass, 1, idStart);//删除旧队列
+					idEnd = ((IdAble) list.get(list.size() - 1)).getId() + 1;
+					storage.delete(entryClass, 1, idStart);// 删除旧队列
 					queueStatus.setIdStart(idEnd);
-					storage.insertDuplicate(queueStatus);//更新进度
+					storage.insertDuplicate(queueStatus);// 更新进度
 					continue;
-				}else{
-					log.info(entryClass + " between " + idStart + " and " +  idEnd + " is null");
-					if(storage.hasMore(entryClass, idEnd)){
-						storage.insertDuplicate(queueStatus);//更新进度
+				} else {
+					log.debug(entryClass + " between " + idStart + " and "
+							+ idEnd + " is null");
+					if (storage.hasMore(entryClass, idEnd)) {
+						log.debug("has more id: " + idEnd);
+						queueStatus.setIdStart(idEnd);
+						storage.insertDuplicate(queueStatus);// 更新进度
 						continue;
 					}
+					log.debug("has no more id: " + idEnd);
 					waiting = true;
 					try {
 						wait();
 					} catch (InterruptedException e1) {
-						break;
+						throw new NPInterruptedException(e1);
 					}
 				}
-			}else{
+			} else {
 				break;
 			}
 		}
 		return e;
 	}
-	
-	private String getTableName(Class<?> clazz){
-		if(clazz == null){
+
+	private String getTableName(Class<?> clazz) {
+		if (clazz == null) {
 			return null;
 		}
 		String table = null;
 		try {
-			 table = clazz.getAnnotation(Entity.class).name();
-			 table = table.equals("") ? clazz.getSimpleName().toLowerCase(): table;
+			table = clazz.getAnnotation(Entity.class).name();
+			table = table.equals("") ? clazz.getSimpleName().toLowerCase()
+					: table;
 		} catch (NullPointerException e) {
 			table = clazz.getSimpleName().toLowerCase();
 		}
 		return table;
 	}
+
 }

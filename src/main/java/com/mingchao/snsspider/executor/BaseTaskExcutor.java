@@ -1,4 +1,4 @@
-package com.mingchao.snsspider.manager;
+package com.mingchao.snsspider.executor;
 
 import java.util.concurrent.Executors;
 import java.util.concurrent.ThreadFactory;
@@ -25,7 +25,7 @@ public class BaseTaskExcutor implements TaskExcutor {
 	public BaseTaskExcutor(int poolSize) {
 		this.semaphore = poolSize;
 		
-		groupName = this.getClass().getName();
+		groupName = this.getClass().getSimpleName();
 		threadGroup = new ThreadGroup(groupName);
 		ThreadFactory threadFactory = new DefaultThreadFactory(threadGroup);
 		threadPool = (ThreadPoolExecutor) Executors.newFixedThreadPool(
@@ -34,24 +34,25 @@ public class BaseTaskExcutor implements TaskExcutor {
 	}
 
 	@Override
-	public synchronized void execute(Task task) {
-		semaphore--;
-		try {
-			if (semaphore < 0) {
-				wait();
-			}
-		} catch (InterruptedException e) {
-			log.warn(e);
+	public synchronized void execute(Task task) throws InterruptedException {
+		while(semaphore == 0){
+			wait();
 		}
-		threadPool.execute(new ExeRunnableTask(task, this));
-		semaphore++;
+		semaphore--;
+		threadPool.execute(new ExeRunnableTask(task, this));//该线程最终会执行下面的 after()函数
 	}
 
 	@Override
 	public synchronized void after() {
-		if (semaphore < 0) {
+		if(semaphore++ == 0){
 			notify();
 		}
+	}
+
+	@Override
+	public void close() {
+		threadPool.shutdown();
+		log.warn(this.getClass().getSimpleName() + " Stopped");
 	}
 }
 

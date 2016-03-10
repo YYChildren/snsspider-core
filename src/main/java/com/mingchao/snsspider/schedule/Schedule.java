@@ -2,9 +2,7 @@ package com.mingchao.snsspider.schedule;
 
 import java.util.List;
 
-import com.mingchao.snsspider.model.ToBytes;
-
-public interface Schedule <T extends ToBytes>{
+public interface Schedule <T>{
 	
 	boolean containsKey(T e);
 
@@ -15,4 +13,6 @@ public interface Schedule <T extends ToBytes>{
 	void reschadule(T e);
 
 	T fetch();
+	
+	void close();
 }

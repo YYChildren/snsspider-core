@@ -1,6 +1,6 @@
 package com.mingchao.snsspider.task;
 
-import com.mingchao.snsspider.manager.TaskExcutor;
+import com.mingchao.snsspider.executor.TaskExcutor;
 
 public class ExeRunnableTask extends RunnableTask{
 	protected TaskExcutor taskExecutor;

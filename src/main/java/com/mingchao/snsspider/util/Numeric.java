@@ -4,7 +4,7 @@ import java.security.InvalidParameterException;
 
 public class Numeric {
 	public final static byte[]  toBytes(long number){
-		int byteSize = Long.BYTES;
+		int byteSize = Long.SIZE / Byte.SIZE;
 		byte[] bytes = new byte[byteSize];
 		for (int i = 0; i < byteSize; i++) {
 			bytes[i] = (byte) (number >>> (byteSize - i - 1) & 0xFF);
@@ -13,7 +13,7 @@ public class Numeric {
 	}
 	
 	public final static byte[]  toBytes(int number){
-		int byteSize = Integer.BYTES;
+		int byteSize = Integer.SIZE / Byte.SIZE;
 		byte[] bytes = new byte[byteSize];
 		for (int i = 0; i < byteSize; i++) {
 			bytes[i] = (byte) (number >>> (byteSize - i - 1) & 0xFF);

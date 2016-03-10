@@ -1,5 +1,6 @@
 package com.mingchao.snsspider.task;
 
+import com.mingchao.snsspider.exception.NPInterruptedException;
 import com.mingchao.snsspider.logging.Log;
 import com.mingchao.snsspider.logging.LogFactory;
 
@@ -11,13 +12,20 @@ public class RunnableTask implements Runnable, Task {
 		this.task = task;
 		this.log = LogFactory.getLog(task.getClass());
 	}
+	
+	public Task getTask() {
+		return task;
+	}
 
 	@Override
 	public void run() {
 		try {
 			before();
 			execute();
-		} catch (Exception e) {
+		} catch(NPInterruptedException e){
+			log.warn(e,e);
+			Thread.currentThread().interrupt();
+		}catch (Exception e) {
 			log.warn(e,e);
 		} finally {
 			after();

@@ -30,4 +30,6 @@ public interface StorageSpi {
    Boolean hasMore(Class<?> c, Serializable idStart);
 
    void delete(Class<?> c, Serializable idStart, Serializable idEnd);
+   
+   void close();
 }

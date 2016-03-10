@@ -1,4 +1,4 @@
-package com.mingchao.snsspider.manager;
+package com.mingchao.snsspider.executor;
 
 
 public class BaseTaskExecutorProvider{

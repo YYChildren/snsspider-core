@@ -4,6 +4,7 @@ package com.mingchao.snsspider.storage.spi.jdbc;
 import java.io.Serializable;
 import java.lang.reflect.Field;
 import java.lang.reflect.Method;
+import java.math.BigInteger;
 import java.util.AbstractMap.SimpleEntry;
 import java.util.ArrayList;
 import java.util.Iterator;
@@ -136,14 +137,21 @@ public class StorageJdbc extends BaseStorageSpi {
 			log.warn(e, e);
 		}
 	}
+	
+	@Override
+	public void close() {
+		HibernateUtil.close();
+	}
 
 	@Override
 	public Boolean hasMore(final Class<?> c, final Serializable idStart) {
 		HibernateSql hs = new HibernateSql() {
 			@Override
 			public Object execute(Session session) throws Exception {
-				String queryString = countSql(c, idStart);
-				return (Integer)session.createSQLQuery(queryString).uniqueResult() > 0;
+				String queryString = hasMoreSql(c, idStart);
+				BigInteger o = (BigInteger)session.createSQLQuery(queryString).uniqueResult();
+				log.debug("has more: " + o.getClass().getName() + "values: "+ o);
+				return o.intValue() == 1;
 			}
 		};
 		try {
@@ -154,10 +162,10 @@ public class StorageJdbc extends BaseStorageSpi {
 		}
 	}
 	
-	public String countSql(Class<?> c, Serializable idStart){
+	public String hasMoreSql(Class<?> c, Serializable idStart){
 		String table = getTableName(c);
 		String fieldName = getIdFieldName(c);
-		String queryString = "SELECT COUNT(*) FROM "+ table 
+		String queryString = "SELECT COUNT(*) > 0 FROM "+ table 
 				 + " WHERE "+ fieldName + ">=" + idStart;
 		return queryString;
 	}

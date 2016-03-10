@@ -61,5 +61,10 @@ public class StorageImpl implements Storage {
 	public void delete(Class<?> c, Serializable idStart, Serializable idEnd) {
 		sspi.delete(c, idStart, idEnd);
 	}
+
+	@Override
+	public void close() {
+		sspi.close();
+	}
 	
 }

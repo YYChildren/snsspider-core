@@ -5,10 +5,8 @@ import javax.persistence.GeneratedValue;
 import javax.persistence.GenerationType;
 import javax.persistence.Id;
 
-import com.mingchao.snsspider.util.Numeric;
-
 @Entity(name="t_user_key")
-public class UserKey extends HadoopString implements ToBytes{
+public class UserKey extends HadoopString{
 	private Long id;
 	private Long qq;
 	private Boolean visitable;
@@ -34,10 +32,7 @@ public class UserKey extends HadoopString implements ToBytes{
 	public String toHadoopString() {
 		return  convertNull(id) + "\t" + convertNull(qq) ;
 	}
-	@Override
-	public byte[] toBytes() {
-		return Numeric.toBytes(qq);
-	}
+	
 	public Boolean getVisitable() {
 		return visitable;
 	}

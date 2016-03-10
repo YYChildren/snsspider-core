@@ -26,7 +26,6 @@ import static com.google.common.base.Preconditions.checkArgument;
  * https://code.google.com/p/smhasher/wiki/MurmurHash2Flaw
  */
 public class BloomFilter {
-	public static final double DEFAULT_FPP = 0.0001;
 	protected BitSet bitSet;
 	protected int numBits;
 	protected int numHashFunctions;
@@ -36,19 +35,42 @@ public class BloomFilter {
 	 */
 
 	public BloomFilter(long expectedEntries) {
-		this(expectedEntries, DEFAULT_FPP);
+		this(expectedEntries, BloomFilterUtil.DEFAULT_FPP);
 	}
 
 	public BloomFilter(long expectedEntries, double fpp) {
 		checkArgument(expectedEntries > 0, "expectedEntries should be > 0");
 		checkArgument(fpp > 0.0 && fpp < 1.0,
 				"False positive probability should be > 0.0 & < 1.0");
+		
+		this.numBits = getNumHashFunctions(expectedEntries, fpp);
+		this.numHashFunctions = getNumHashFunctions(expectedEntries, numBits);
+		this.bitSet = new BitSet(numBits);
+	}
+	
+	public BloomFilter(int numBits, int numHashFunctions) {
+		this.numBits = numBits;
+		this.numHashFunctions = numHashFunctions;
+		this.bitSet = new BitSet(numBits);
+	}
+	
+
+	public static int getNumBits(long expectedEntries, double fpp) {
 		int nb = optimalNumOfBits(expectedEntries, fpp);
 		// make 'm' multiple of 64
-		this.numBits = nb + (Long.SIZE - (nb % Long.SIZE));
-		this.numHashFunctions = optimalNumOfHashFunctions(expectedEntries,
+		int numBits = nb + (Long.SIZE - (nb % Long.SIZE));
+		return numBits;
+	}
+
+	public static int getNumHashFunctions(long expectedEntries, double fpp) {
+		return getNumHashFunctions(expectedEntries,
+				getNumBits(expectedEntries, fpp));
+	}
+
+	public static int getNumHashFunctions(long expectedEntries, int numBits) {
+		int numHashFunctions = optimalNumOfHashFunctions(expectedEntries,
 				numBits);
-		this.bitSet = new BitSet(numBits);
+		return numHashFunctions;
 	}
 
 	/**
@@ -65,6 +87,21 @@ public class BloomFilter {
 		for (int i = 0; i < bits.size(); i++)
 			copied[i] = bits.get(i);
 		bitSet = new BitSet(copied);
+		this.numBits = numBits;
+		numHashFunctions = numFuncs;
+	}
+
+	/**
+	 * A constructor to support rebuilding the BloomFilter from a serialized
+	 * representation.
+	 * 
+	 * @param data
+	 * @param numBits
+	 * @param numFuncs
+	 */
+	public BloomFilter(long[] data, int numBits, int numFuncs) {
+		super();
+		bitSet = new BitSet(data);
 		this.numBits = numBits;
 		numHashFunctions = numFuncs;
 	}

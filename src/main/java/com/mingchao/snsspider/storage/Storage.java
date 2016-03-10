@@ -31,4 +31,5 @@ public interface Storage {
   
   void delete(Class<?> c,Serializable idStart, Serializable idEnd);
 
+  void close();
 }

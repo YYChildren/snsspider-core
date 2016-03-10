@@ -9,7 +9,7 @@ public class CookieStorePool {
 	public static final int DEFALT_SIZE = 1;
 	private Map<Integer,CookieSnsStore> cookiesPool;
 	private Random random = new Random();
-	private int size;
+	private int maxSize;
 	
 	public CookieStorePool(){
 		this(DEFALT_SIZE);
@@ -17,7 +17,7 @@ public class CookieStorePool {
 	
 	public CookieStorePool(int size){
 		cookiesPool = new HashMap<Integer,CookieSnsStore>();
-		this.size = size;
+		this.maxSize = size;
 	}
 	
 	public synchronized CookieSnsStore getRandomCookies(){
@@ -60,7 +60,23 @@ public class CookieStorePool {
 	}
 	
 	public synchronized boolean isFull(){
-		return cookiesPool.size() == size;
+		return cookiesPool.size() >= maxSize;
+	}
+	
+	public synchronized int size(){
+		return cookiesPool.size();
+	}
+	
+	public synchronized void waiting() throws InterruptedException{
+		if(isFull()){
+			this.wait();
+		}
+	}
+	
+	public synchronized void notifying(){
+		if(!isFull()){
+			this.notify();
+		}
 	}
 	
 }

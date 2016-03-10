@@ -53,4 +53,8 @@ public class BaseStorageSpi implements StorageSpi{
 	public void delete(Class<?> c, Serializable idStart, Serializable idEnd) {
 	}
 
+	@Override
+	public void close() {
+	}
+
 }
