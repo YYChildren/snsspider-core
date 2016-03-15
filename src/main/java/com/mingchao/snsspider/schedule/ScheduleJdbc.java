@@ -1,11 +1,9 @@
 package com.mingchao.snsspider.schedule;
 
 import java.util.ArrayList;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
-
-import javax.persistence.Entity;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnel;
@@ -13,7 +11,8 @@ import com.mingchao.snsspider.exception.NPInterruptedException;
 import com.mingchao.snsspider.model.IdAble;
 import com.mingchao.snsspider.model.QueueStatus;
 import com.mingchao.snsspider.storage.Storage;
-import com.mingchao.snsspider.storage.StorageJdbcSington;
+import com.mingchao.snsspider.storage.StorageJdbcLocal;
+import com.mingchao.snsspider.storage.util.SQLUtil;
 import com.mingchao.snsspider.util.BloomFilterUtil;
 
 public class ScheduleJdbc<T  extends IdAble> extends ScheduleImpl<T> {
@@ -22,33 +21,36 @@ public class ScheduleJdbc<T  extends IdAble> extends ScheduleImpl<T> {
 	protected Queue<T> queue;
 	protected Storage storage;
 	protected boolean waiting;
-	protected String entryKey;
+	protected String entryTable;
+	private Class<? extends QueueStatus> queueStatusClass; 
 	
-	public ScheduleJdbc(Class<T> entryClass,  Funnel<T> funnel) {
-		this(entryClass, funnel, BloomFilterUtil.EXPECTEDENTRIES);
+	public ScheduleJdbc(Class<T> entryClass, Class<? extends QueueStatus> queueStatusClass, Funnel<T> funnel) {
+		this(entryClass, queueStatusClass, funnel, BloomFilterUtil.EXPECTEDENTRIES);
 	}
 
-	public ScheduleJdbc(Class<T> entryClass, Funnel<T> funnel, long expectedEntries) {
-		this(entryClass, funnel, expectedEntries, BloomFilterUtil.DEFAULT_FPP);
+	public ScheduleJdbc(Class<T> entryClass, Class<? extends QueueStatus> queueStatusClass, Funnel<T> funnel, long expectedEntries) {
+		this(entryClass, queueStatusClass, funnel, expectedEntries, BloomFilterUtil.DEFAULT_FPP);
 	}
 
-	public ScheduleJdbc(Class<T> entryClass,  Funnel<T> funnel, long expectedEntries, double fpp) {
-		this(entryClass, funnel, expectedEntries, fpp, null);
+	public ScheduleJdbc(Class<T> entryClass, Class<? extends QueueStatus> queueStatusClass,  Funnel<T> funnel, long expectedEntries, double fpp) {
+		this(entryClass, queueStatusClass, funnel, expectedEntries, fpp, null);
 	}
 
-	public ScheduleJdbc(Class<T> entryClass,  Funnel<T> funnel, long expectedEntries, double fpp,
+	public ScheduleJdbc(Class<T> entryClass, Class<? extends QueueStatus> queueStatusClass,  Funnel<T> funnel, long expectedEntries, double fpp,
 			String bloomPath) {
-		queue = new LinkedList<T>();
+		queue = new ConcurrentLinkedQueue<T>();
 		this.entryClass = entryClass;
-		this.entryKey = getTableName(entryClass);
+		this.entryTable = SQLUtil.getTableName(entryClass);
+		this.queueStatusClass = queueStatusClass;
 		this.bloomPath = bloomPath;
-		this.filter = BloomFilter.create(funnel, expectedEntries, fpp);
+		this.filter = readFrom(funnel);
+		this.filter = filter == null ? BloomFilter.create(funnel, expectedEntries, fpp) : filter; 
 		waiting = false;
 		setStorage();
 	}
 
 	protected void setStorage() {
-		this.storage = StorageJdbcSington.getInstance();
+		this.storage = StorageJdbcLocal.JDBC.getInstance();
 	}
 
 	public synchronized boolean containsKey(T e) {
@@ -78,10 +80,8 @@ public class ScheduleJdbc<T  extends IdAble> extends ScheduleImpl<T> {
 			filter.put(e);
 			storage.insertIgnore(e);
 			hasNew = true;
-		}else{
-			log.debug("not schedule: " + e.getClass() + ":" + e.toString());
 		}
-		if (hasNew && waiting) {
+		if (hasNew && waiting){
 			waiting = false;
 			notify();
 		}
@@ -98,68 +98,80 @@ public class ScheduleJdbc<T  extends IdAble> extends ScheduleImpl<T> {
 
 	@SuppressWarnings("unchecked")
 	public synchronized T fetch() {
-		T e;
-		while (true) {
-			log.info(entryClass.getSimpleName() + " size: " + queue.size());
-			e = (T) queue.poll();
-			if (e == null) {
-				QueueStatus queueStatus = (QueueStatus) storage.get(
-						QueueStatus.class, entryKey);// 获取进度
-				if (queueStatus == null) {
-					queueStatus = new QueueStatus();
-					queueStatus.setTableName(entryKey);
-					queueStatus.setIdStart(1L);
-				}
-				Long idStart = queueStatus.getIdStart();
-				Long idEnd = idStart + STEP;
-				List<Object> list = storage.get(entryClass, idStart, idEnd);
-				log.debug("idStart: " + idStart);
-				if (!(list == null || list.isEmpty())) {
-					for (Object newEntry : list) {
-						queue.offer((T) newEntry);
-					}
-					idEnd = ((IdAble) list.get(list.size() - 1)).getId() + 1;
-					storage.delete(entryClass, 1, idStart);// 删除旧队列
-					queueStatus.setIdStart(idEnd);
-					storage.insertDuplicate(queueStatus);// 更新进度
-					continue;
-				} else {
-					log.debug(entryClass + " between " + idStart + " and "
-							+ idEnd + " is null");
-					if (storage.hasMore(entryClass, idEnd)) {
-						log.debug("has more id: " + idEnd);
-						queueStatus.setIdStart(idEnd);
-						storage.insertDuplicate(queueStatus);// 更新进度
-						continue;
-					}
-					log.debug("has no more id: " + idEnd);
-					waiting = true;
-					try {
-						wait();
-					} catch (InterruptedException e1) {
-						throw new NPInterruptedException(e1);
-					}
-				}
-			} else {
-				break;
-			}
-		}
-		return e;
-	}
-
-	private String getTableName(Class<?> clazz) {
-		if (clazz == null) {
+		if(closing){
 			return null;
 		}
-		String table = null;
-		try {
-			table = clazz.getAnnotation(Entity.class).name();
-			table = table.equals("") ? clazz.getSimpleName().toLowerCase()
-					: table;
-		} catch (NullPointerException e) {
-			table = clazz.getSimpleName().toLowerCase();
+		log.debug(entryClass.getSimpleName() + " size: " + queue.size());
+		T e = null;
+		QueueStatus queueStatus = null;
+		if(queue.isEmpty()) {
+			queueStatus = (QueueStatus) storage.get(queueStatusClass, entryTable);// 获取进度
+			if (queueStatus == null) {
+				try {
+					queueStatus = queueStatusClass.newInstance();
+				} catch (InstantiationException | IllegalAccessException e1) {//不会出现该错误
+					log.warn(e1, e1);
+				}
+				queueStatus.setTableName(entryTable);
+				queueStatus.setIdEnd(1L);
+			}
 		}
-		return table;
+		while (queue.isEmpty()) {
+			Long idStart = queueStatus.getIdEnd();//小于idStart的可以删除
+			Long idEnd = idStart + STEP;
+			queueStatus.setIdStart(idStart);
+			List<Object> list = storage.get(entryClass, idStart, idEnd);
+			log.debug("idStart: " + idStart);
+			if (list == null || list.isEmpty()) {
+				log.debug(entryClass + " between " + idStart + " and "
+						+ idEnd + " is null");
+				if (storage.hasMore(entryClass, idEnd)) {
+					log.debug("has more id: " + idEnd);
+					queueStatus.setIdStart(idEnd);
+					continue;
+				}
+				log.debug("has no more id: " + idEnd);
+				waiting = true;
+				try {
+					wait();
+				} catch (InterruptedException e1) {
+					throw new NPInterruptedException(e1);
+				}
+			} else {
+				for (Object newEntry : list) {
+					queue.offer((T) newEntry);
+				}
+				idEnd = ((IdAble) list.get(list.size() - 1)).getId() + 1;
+				storage.delete(entryClass, 1, idStart);// 删除旧队列
+				queueStatus.setIdStart(idEnd);
+				storage.insertDuplicate(queueStatus);// 更新进度
+			}
+		}
+		e = (T) queue.poll();
+		return e;
 	}
-
+	
+	@Override
+	public void dump() {
+		super.dump();
+		T e = queue.peek();
+		if(e != null){
+			Long endId = e.getId();
+			QueueStatus queueStatus;
+			try {
+				queueStatus = queueStatusClass.newInstance();
+				queueStatus.setTableName(entryTable);
+				queueStatus.setIdEnd(endId);
+				storage.insertDuplicate(queueStatus);
+			} catch (InstantiationException | IllegalAccessException e1) {//不会出现该错误
+				log.warn(e1, e1);
+			}
+		}
+	}
+	
+	@Override
+	public void close(){
+		super.close();
+		storage.close();
+	}
 }

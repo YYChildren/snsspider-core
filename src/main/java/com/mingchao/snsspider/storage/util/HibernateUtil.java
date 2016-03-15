@@ -1,9 +1,10 @@
-package com.mingchao.snsspider.storage.spi.jdbc;
+package com.mingchao.snsspider.storage.util;
 
 import java.io.Serializable;
 
 import org.hibernate.Session;
 import org.hibernate.SessionFactory;
+import org.hibernate.boot.registry.StandardServiceRegistryBuilder;
 import org.hibernate.cfg.Configuration;
 
 import com.mingchao.snsspider.logging.Log;
@@ -11,24 +12,28 @@ import com.mingchao.snsspider.logging.LogFactory;
 
 public class HibernateUtil {
 	
-	private static Log log = LogFactory.getLog(HibernateUtil.class);
+	private Log log = LogFactory.getLog(this.getClass());
 
-	private static final SessionFactory sessionFactory = buildSessionFactory();
+	private final SessionFactory sessionFactory;
 
-	private static SessionFactory buildSessionFactory() {
+	public HibernateUtil() {
+		this(StandardServiceRegistryBuilder.DEFAULT_CFG_RESOURCE_NAME); 
+	}
+	
+	public HibernateUtil(String resource) {
 		try {
-			return new Configuration().configure().buildSessionFactory();
+			sessionFactory = new Configuration().configure(resource).buildSessionFactory();
 		} catch (Throwable ex) {
 			log.error("Initial SessionFactory creation failed." , ex);
 			throw new ExceptionInInitializerError(ex);
 		}
 	}
 
-	public static SessionFactory getSessionFactory() {
+	public SessionFactory getSessionFactory() {
 		return sessionFactory;
 	}
 
-	public static void save(final Object data) throws Exception{
+	public void save(final Object data) throws Exception{
 		HibernateSql hs = new HibernateSql(){  
 			@Override
 			public Object execute(Session session) throws Exception {
@@ -39,7 +44,7 @@ public class HibernateUtil {
 		execute(hs);
     }
 
-	public static void saveOrUpdate(final Object data) throws Exception{
+	public void saveOrUpdate(final Object data) throws Exception{
 		HibernateSql hs = new HibernateSql(){  
 			@Override
 			public Object execute(Session session) throws Exception {
@@ -49,7 +54,7 @@ public class HibernateUtil {
 		execute(hs);
     }
 
-	public static Object get(final Class<?> c,final Serializable id) throws Exception {
+	public Object get(final Class<?> c,final Serializable id) throws Exception {
 		HibernateSql hs = new HibernateSql(){  
 			@Override
 			public Object execute(Session session) throws Exception {
@@ -59,7 +64,7 @@ public class HibernateUtil {
 		return execute(hs);
 	}
 
-	public static Object load(final Class<?> c,final Serializable id) throws Exception {
+	public Object load(final Class<?> c,final Serializable id) throws Exception {
 		HibernateSql hs = new HibernateSql(){  
 			@Override
 			public Object execute(Session session) throws Exception {
@@ -69,7 +74,7 @@ public class HibernateUtil {
 		return execute(hs);
 	}
 
-	public static void delete(final Object o) throws Exception{
+	public void delete(final Object o) throws Exception{
 		HibernateSql hs = new HibernateSql(){  
 			@Override
 			public Object execute(Session session) throws Exception {
@@ -80,10 +85,10 @@ public class HibernateUtil {
 		execute(hs);
 	}
 
-	public static Object execute(HibernateSql hs) throws Exception {
+	public Object execute(HibernateSql hs) throws Exception {
 		Session session = null;
 		try {
-			session = HibernateUtil.getSessionFactory().openSession();
+			session = sessionFactory.openSession();
 			session.beginTransaction();
 			Object result = hs.execute(session);
 			session.getTransaction().commit();
@@ -96,7 +101,7 @@ public class HibernateUtil {
 		}
 	}
 	
-	public static void close(){
+	public void close(){
 		sessionFactory.close();
 	}
 }

@@ -1,39 +1,41 @@
 package com.mingchao.snsspider.schedule;
 
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnel;
 import com.mingchao.snsspider.util.BloomFilterUtil;
 
-public class ScheduleMem <T> extends ScheduleImpl <T>{
+public class ScheduleMem<T> extends ScheduleImpl<T> {
 
 	private Queue<T> queue;
 
-	public ScheduleMem(Class<T> entryClass,  Funnel<T> funnel) {
+	public ScheduleMem(Class<T> entryClass, Funnel<T> funnel) {
 		this(entryClass, funnel, BloomFilterUtil.EXPECTEDENTRIES);
 	}
 
-	public ScheduleMem(Class<T> entryClass, Funnel<T> funnel, long expectedEntries) {
+	public ScheduleMem(Class<T> entryClass, Funnel<T> funnel,
+			long expectedEntries) {
 		this(entryClass, funnel, expectedEntries, BloomFilterUtil.DEFAULT_FPP);
 	}
 
-	public ScheduleMem(Class<T> entryClass,  Funnel<T> funnel, long expectedEntries, double fpp) {
+	public ScheduleMem(Class<T> entryClass, Funnel<T> funnel,
+			long expectedEntries, double fpp) {
 		this(entryClass, funnel, expectedEntries, fpp, null);
 	}
 
-	public ScheduleMem(Class<T> entryClass,  Funnel<T> funnel, long expectedEntries, double fpp,
-			String bloomPath) {
+	public ScheduleMem(Class<T> entryClass, Funnel<T> funnel,
+			long expectedEntries, double fpp, String bloomPath) {
 		this.entryClass = entryClass;
 		this.bloomPath = bloomPath;
-		queue = new LinkedList<T>();
-		this.filter = BloomFilter.create(funnel, expectedEntries, fpp);
+		queue = new ConcurrentLinkedQueue<T>();
+		this.filter = readFrom(funnel);
+		this.filter = filter == null ? BloomFilter.create(funnel, expectedEntries, fpp) : filter; 
 	}
-	
-	
-	public synchronized boolean containsKey(T e){
+
+	public synchronized boolean containsKey(T e) {
 		return filter.mightContain(e);
 	}
 
@@ -42,7 +44,7 @@ public class ScheduleMem <T> extends ScheduleImpl <T>{
 			schadule(userKey);
 		}
 	}
-	
+
 	public synchronized void schadule(T e) {
 		if (!filter.mightContain(e)) {
 			filter.put(e);
@@ -51,11 +53,14 @@ public class ScheduleMem <T> extends ScheduleImpl <T>{
 	}
 
 	public synchronized void reschadule(T e) {
-			filter.put(e);
-			queue.offer(e);
+		filter.put(e);
+		queue.offer(e);
 	}
 
 	public synchronized T fetch() {
-			return (T) queue.poll();
+		if(closing){
+			return null;
+		}
+		return (T) queue.poll();
 	}
 }

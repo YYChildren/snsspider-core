@@ -1,4 +1,4 @@
-package com.mingchao.snsspider.storage.spi.hadoop;
+package com.mingchao.snsspider.storage.hadoop;
 
 import java.io.File;
 import java.io.IOException;
@@ -16,9 +16,9 @@ import java.util.Map;
 import java.util.Map.Entry;
 
 import com.mingchao.snsspider.model.HadoopString;
-import com.mingchao.snsspider.storage.spi.BaseStorageSpi;
+import com.mingchao.snsspider.storage.BaseStorage;
 
-public class StorageHadoop extends BaseStorageSpi {
+public class StorageHadoop extends BaseStorage {
 
 	private Map<String, PrintWriter> pwMap = new HashMap<String, PrintWriter>();
 

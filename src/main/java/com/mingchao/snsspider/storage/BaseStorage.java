@@ -1,4 +1,4 @@
-package com.mingchao.snsspider.storage.spi;
+package com.mingchao.snsspider.storage;
 
 import java.io.Serializable;
 import java.util.List;
@@ -6,7 +6,7 @@ import java.util.List;
 import com.mingchao.snsspider.logging.Log;
 import com.mingchao.snsspider.logging.LogFactory;
 
-public class BaseStorageSpi implements StorageSpi{
+public class BaseStorage implements Storage{
 	
 	protected Log log = LogFactory.getLog(this.getClass());
 

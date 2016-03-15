@@ -21,6 +21,7 @@ public abstract class ScheduleImpl<T> implements Schedule<T> {
 	protected Class<T> entryClass;
 	protected BloomFilter<T> filter;
 	protected String bloomPath;
+	protected boolean closing = false;
 	
 
 	@Override
@@ -46,8 +47,18 @@ public abstract class ScheduleImpl<T> implements Schedule<T> {
 	}
 
 	@Override
-	public void close() {
+	public void closing() {
+		closing = true;
+	}
+	
+	@Override
+	public void dump() {
 		dumpFilter();
+	}
+	
+	@Override
+	public void close() {
+		//TODO
 	}
 	
 	public void dumpFilter() {
@@ -59,6 +70,7 @@ public abstract class ScheduleImpl<T> implements Schedule<T> {
 			Files.createDirectories(Paths.get(bloomPath));
 			ops = new BufferedOutputStream(Files.newOutputStream(Paths.get(getPath())));
 			filter.writeTo(ops);
+			log.info("Bloom filter write to path: "+ getPath());
 		} catch (IOException e) {
 		}finally{
 			if (ops != null) {
@@ -78,7 +90,9 @@ public abstract class ScheduleImpl<T> implements Schedule<T> {
 		InputStream in = null;
 		try {
 			in = new BufferedInputStream(Files.newInputStream(Paths.get(getPath())));
-			return BloomFilter.readFrom(in, funnel);
+			BloomFilter<T> filter = BloomFilter.readFrom(in, funnel);
+			log.info("Bloom filter read from path: "+ getPath());
+			return filter;
 		} catch (IOException e) {
 			return null;
 		}finally{
@@ -93,7 +107,6 @@ public abstract class ScheduleImpl<T> implements Schedule<T> {
 	}
 	
 	private String getPath(){
-		return bloomPath + File.pathSeparator + entryClass.getSimpleName();
+		return bloomPath + File.separator + entryClass.getSimpleName();
 	}
-
 }

@@ -2,6 +2,12 @@ package com.mingchao.snsspider.schedule;
 
 import java.util.List;
 
+/**
+ * 
+ * @author yangchaojun
+ *
+ * @param <T> 需啊哟啊调度的结构
+ */
 public interface Schedule <T>{
 	
 	boolean containsKey(T e);
@@ -13,6 +19,10 @@ public interface Schedule <T>{
 	void reschadule(T e);
 
 	T fetch();
+	
+	void closing();
+	
+	void dump();
 	
 	void close();
 }

@@ -1,4 +1,4 @@
-package com.mingchao.snsspider.storage.spi.jdbc;
+package com.mingchao.snsspider.storage.util;
 
 import org.hibernate.Session;
 

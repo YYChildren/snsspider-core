@@ -9,7 +9,6 @@ import java.util.concurrent.TimeUnit;
 import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriverException;
 import org.openqa.selenium.chrome.ChromeDriver;
-import org.openqa.selenium.phantomjs.PhantomJSDriver;
 import org.openqa.selenium.remote.RemoteWebDriver;
 
 import com.mingchao.snsspider.exception.WebDriverCosingException;
@@ -19,6 +18,7 @@ import com.mingchao.snsspider.util.Closeable;
 
 public class WebDriverPool implements Closeable {
 	public static final int DEFALT_SIZE = 1;
+	public static final Class<? extends RemoteWebDriver> DEFAULT_WEBDRIVERCLASS = ChromeDriver.class;
 
 	private Queue<WebDriverWrapper> webDrivers;
 	// 是否被使用
@@ -27,15 +27,24 @@ public class WebDriverPool implements Closeable {
 	private int semaphore;
 	private boolean closing;
 	private Log log;
+	private Class<? extends RemoteWebDriver> webDriverClass;
 
 	public WebDriverPool() {
-		this(DEFALT_SIZE);
+		this(DEFAULT_WEBDRIVERCLASS);
+	}
+	
+	public WebDriverPool(int size){
+		this(DEFAULT_WEBDRIVERCLASS,DEFALT_SIZE);
+	}
+	
+	public WebDriverPool(Class<? extends RemoteWebDriver> webDriverClass){
+		this(webDriverClass,DEFALT_SIZE);
 	}
 
-	public WebDriverPool(int size) {
+	public WebDriverPool(Class<? extends RemoteWebDriver> webDriverClass, int size) {
+		this.webDriverClass = webDriverClass;
 		this.poolSize = size;
 		semaphore = poolSize;
-
 		webDrivers = new LinkedList<WebDriverWrapper>();
 		webDriverList = new ArrayList<WebDriverWrapper>();
 		for (int i = 0; i < poolSize; i++) {
@@ -69,8 +78,13 @@ public class WebDriverPool implements Closeable {
 	}
 
 	private RemoteWebDriver newWebDriver() {
-		RemoteWebDriver webDriver = new ChromeDriver();
-		// RemoteWebDriver webDriver = new PhantomJSDriver();
+		RemoteWebDriver webDriver = null;
+		try {
+			webDriver = webDriverClass.newInstance();
+		} catch (InstantiationException | IllegalAccessException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 		ensurePageLoad(webDriver);// 确保页面加载
 		return webDriver;
 	}
