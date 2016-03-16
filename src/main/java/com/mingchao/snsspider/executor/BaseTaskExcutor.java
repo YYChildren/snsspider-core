@@ -35,16 +35,15 @@ public class BaseTaskExcutor implements TaskExcutor {
 
 	@Override
 	public synchronized void execute(Task task) throws InterruptedException {
-		while(semaphore == 0){
+		if(--semaphore < 0){//申请资源
 			wait();
 		}
-		semaphore--;
 		threadPool.execute(new ExeRunnableTask(task, this));//该线程最终会执行下面的 after()函数
 	}
 
 	@Override
 	public synchronized void after() {
-		if(semaphore++ == 0){
+		if(semaphore++ < 0){//释放资源
 			notify();
 		}
 	}

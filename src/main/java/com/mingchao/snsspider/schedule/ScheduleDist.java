@@ -217,7 +217,7 @@ public class ScheduleDist<T extends IdAble> extends ScheduleImpl<T>{
 		}
 	}
 
-	// TODO 关闭前需要更改idStart游标为队列最前坐标
+	// TODO 关闭前需要更改idEnd游标为队列最前坐标
 	@Override
 	public void dump() {
 		super.dump();

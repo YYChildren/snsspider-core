@@ -44,7 +44,7 @@ public class WebDriverPool implements Closeable {
 	public WebDriverPool(Class<? extends RemoteWebDriver> webDriverClass, int size) {
 		this.webDriverClass = webDriverClass;
 		this.poolSize = size;
-		semaphore = poolSize;
+		this.semaphore = poolSize;
 		webDrivers = new LinkedList<WebDriverWrapper>();
 		webDriverList = new ArrayList<WebDriverWrapper>();
 		for (int i = 0; i < poolSize; i++) {
@@ -82,8 +82,7 @@ public class WebDriverPool implements Closeable {
 		try {
 			webDriver = webDriverClass.newInstance();
 		} catch (InstantiationException | IllegalAccessException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
+			log.warn(e, e);
 		}
 		ensurePageLoad(webDriver);// 确保页面加载
 		return webDriver;
@@ -103,26 +102,24 @@ public class WebDriverPool implements Closeable {
 		}
 		WebDriverWrapper webDriverWrapper = null;
 		synchronized(this){
-			while(semaphore == 0){
-				wait();
+			if(--semaphore < 0 ){
+				this.wait();
 			}
-			semaphore--;
-		}
-		
-		try {
 			webDriverWrapper = webDrivers.poll();
+		}
+		try {
 			T rs = new SubmitTaskWrapper<T>(getTask)
 					.submit(webDriverWrapper);
 			return rs;
 		} catch (Exception e) {
 			throw e;
 		}finally{
-			if(webDriverWrapper != null){
-				webDrivers.offer(webDriverWrapper);
-			}
 			synchronized(this){
-				if(semaphore++ == 0){
-					notify();
+				if(webDriverWrapper != null){
+					webDrivers.offer(webDriverWrapper);
+				}
+				if(semaphore++ < 0){
+					this.notify();
 				}
 			}
 		}
