@@ -91,11 +91,10 @@ public class ScheduleDist<T extends IdAble> extends ScheduleImpl<T>{
 		}
 	}
 
-	//重新调度的放到本地数据库里，数据库本身不做去重
+	//调度统一放到Master数据库，数据库本身需要做去重，需要处理id，不处理filter
 	@Override
 	public void reschadule(T e) {
-		filter.put(e);
-		storageLocal.insertIgnore(e);
+		storageMaster.insertDuplicateAutoId(e);
 	}
 	
 	@SuppressWarnings("unchecked")

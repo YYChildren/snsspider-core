@@ -24,5 +24,7 @@ public class TestStorageJdbc {
 		uk.setDesc("userKey");
 		System.out.println(SQLUtil.getInsertIgnoreSql(uk));
 		System.out.println(SQLUtil.getInsertDuplicateSql(uk));
+		uk.setId(null);
+		System.out.println(SQLUtil.getInsertDuplicateAutoIdSql(uk));
 	}
 }

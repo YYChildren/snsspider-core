@@ -84,7 +84,9 @@ public class SQLUtil {
 		for (Entry<String, Object> entry : kvs) {
 			keyBuilder.append(entry.getKey()).append(", ");
 			Object value = entry.getValue();
-			if (value instanceof String) {
+			if (value == null) {
+				valueBuilder.append("NULL").append(", ");
+			} else if (value instanceof String) {
 				valueBuilder.append(STRING_SE).append(value).append(STRING_SE)
 						.append(", ");
 			} else {
@@ -117,40 +119,60 @@ public class SQLUtil {
 		}
 		return kvs;
 	}
-
-	public static String getInsertIgnoreSql(Object object){
-		List<Entry<String, Object>> kvs = getKVs(object);
-		if(kvs.isEmpty()){
-			return null;
-		}
-		Entry<String,String> kvsString = getKVString(kvs);
-		return new StringBuilder()
-			.append("INSERT IGNORE INTO ")
-			.append(getTableName(object))
-			.append(kvsString.getKey())
-			.append(" VALUES")
-			.append(kvsString.getValue())
-			.toString();
-	}
 	
-	public static String getInsertDuplicateSql(Object object){
+	public static List<Entry<String, Object>> getAutoIdKVs(Object object) {
+		Class<?> clazz = object.getClass();
+		Field[] fileds = clazz.getDeclaredFields();
+		List<Entry<String, Object>> kvs = new ArrayList<Entry<String, Object>>();
+		for (int i = 0; i < fileds.length; i++) {
+			fileds[i].setAccessible(true);
+			try {
+				Object v = fileds[i].get(object);
+				if (v != null || fileds[i].getName().equalsIgnoreCase("id")) {
+					kvs.add(new SimpleEntry<String, Object>(
+							fileds[i].getName(), v));
+				}
+			} catch (IllegalArgumentException | IllegalAccessException e) {
+			}
+		}
+		return kvs;
+	}
+
+	public static String getInsertIgnoreSql(Object object) {
 		List<Entry<String, Object>> kvs = getKVs(object);
-		if(kvs.isEmpty()){
+		if (kvs.isEmpty()) {
 			return null;
 		}
-		Entry<String,String> kvsString = getKVString(kvs);
+		Entry<String, String> kvsString = getKVString(kvs);
+		return new StringBuilder().append("INSERT IGNORE INTO ")
+				.append(getTableName(object)).append(kvsString.getKey())
+				.append(" VALUES").append(kvsString.getValue()).toString();
+	}
+
+	public static String getInsertDuplicateSql(Object object) {
+		List<Entry<String, Object>> kvs = getKVs(object);
+		return getInsertDuplicateSql(object,kvs);
+	}
+
+	public static String getInsertDuplicateAutoIdSql(Object object) {
+		List<Entry<String, Object>> kvs = getAutoIdKVs(object);
+		return getInsertDuplicateSql(object,kvs);
+	}
+
+	public static String getInsertDuplicateSql(Object object,List<Entry<String, Object>> kvs) {
+		if (kvs.isEmpty()) {
+			return null;
+		}
+		Entry<String, String> kvsString = getKVString(kvs);
 		StringBuilder sqlBuilder = new StringBuilder();
-		sqlBuilder.append("INSERT INTO ")
-			.append(getTableName(object))
-			.append(kvsString.getKey())
-			.append(" VALUES")
-			.append(kvsString.getValue())
-			.append(" ON DUPLICATE KEY UPDATE ");
+		sqlBuilder.append("INSERT INTO ").append(getTableName(object))
+				.append(kvsString.getKey()).append(" VALUES")
+				.append(kvsString.getValue())
+				.append(" ON DUPLICATE KEY UPDATE ");
 		for (Entry<String, Object> entry : kvs) {
 			String key = entry.getKey();
-			sqlBuilder.append(key).append("=VALUES")
-				.append(LEFT_BRACKETS).append(key).append(RIGHT_BRACKETS)
-				.append(", ");
+			sqlBuilder.append(key).append("=VALUES").append(LEFT_BRACKETS)
+					.append(key).append(RIGHT_BRACKETS).append(", ");
 		}
 		return sqlBuilder.substring(0, sqlBuilder.length() - 2);
 	}

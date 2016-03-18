@@ -56,6 +56,25 @@ public class StorageMySQL extends StorageJdbc {
 		}
 	}
 
+	public void insertDuplicateAutoIncrement(Object object) {
+		final String sql = SQLUtil.getInsertDuplicateSql(object);
+		if(sql == null){
+			return;
+		}
+		HibernateSql hs = new HibernateSql(){
+			@Override
+			public Object execute(Session session) throws Exception {
+				session.createSQLQuery(sql).executeUpdate();
+				return null;
+			}
+		};
+		try {
+			hu.execute(hs);
+		} catch (Exception e) {
+			log.warn(e, e);
+		}
+	}
+	
 	public void insertDuplicate(Object object) {
 		final String sql = SQLUtil.getInsertDuplicateSql(object);
 		if(sql == null){
@@ -74,6 +93,26 @@ public class StorageMySQL extends StorageJdbc {
 			log.warn(e, e);
 		}
 	}
+	
+	public void insertDuplicateAutoId(Object object) {
+		final String sql = SQLUtil.getInsertDuplicateAutoIdSql(object);
+		if(sql == null){
+			return;
+		}
+		HibernateSql hs = new HibernateSql(){
+			@Override
+			public Object execute(Session session) throws Exception {
+				session.createSQLQuery(sql).executeUpdate();
+				return null;
+			}
+		};
+		try {
+			hu.execute(hs);
+		} catch (Exception e) {
+			log.warn(e, e);
+		}
+	}
+	
 
 	public void insertDuplicate(final List<?> list) {
 		HibernateSql hs = new HibernateSql(){
@@ -96,4 +135,5 @@ public class StorageMySQL extends StorageJdbc {
 			log.warn(e, e);
 		}
 	}
+	
 }
