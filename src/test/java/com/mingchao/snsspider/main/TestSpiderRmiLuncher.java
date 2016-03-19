@@ -1,12 +1,8 @@
 package com.mingchao.snsspider.main;
 
-import java.net.MalformedURLException;
-import java.rmi.NotBoundException;
-import java.rmi.RemoteException;
-
 import com.mingchao.snsspider.util.Closeable;
 
-public class TestSpiderServiceCtl {
+public class TestSpiderRmiLuncher {
 	public static void main(String[] args) {
 		Closeable closeable = new Closeable() {
 			@Override
@@ -15,13 +11,18 @@ public class TestSpiderServiceCtl {
 			}
 		};
 		int port = 7777;
+		SpiderRmiLuncher lun = null;
 		try {
-			SpiderServiceCtl.startServer(closeable, port);
+			lun = new SpiderRmiLuncher(closeable, port);
+			lun.startServer();
 			Thread.sleep(200);
-			SpiderServiceCtl.close(port);
-		} catch (RemoteException | MalformedURLException | NotBoundException
-				| InterruptedException e) {
+		} catch (InterruptedException e) {
 			e.printStackTrace();
+		} finally {
+			if(lun != null){
+				lun.close();
+			}
 		}
+		System.exit(0);
 	}
 }

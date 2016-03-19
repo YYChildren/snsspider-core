@@ -7,8 +7,7 @@
 		<version>0.0.1</version>
 	</parent>
 	<artifactId>snsspider-core</artifactId>
-
-
+	
 	<dependencies>
 		<dependency>
 			<groupId>org.jsoup</groupId>
@@ -67,6 +66,11 @@
 		</dependency>
 
 		<dependency>
+			<groupId>com.sun</groupId>
+			<artifactId>tools</artifactId>
+		</dependency>
+
+		<dependency>
 			<groupId>org.hibernate</groupId>
 			<artifactId>hibernate-core</artifactId>
 		</dependency>
@@ -105,7 +109,7 @@
 		</dependency>
 
 	</dependencies>
-	
+
 	<build>
 		<plugins>
 			<plugin>
