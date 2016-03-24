@@ -20,6 +20,7 @@ public class HibernateUtil {
 		this(StandardServiceRegistryBuilder.DEFAULT_CFG_RESOURCE_NAME); 
 	}
 	
+	@SuppressWarnings("deprecation")
 	public HibernateUtil(String resource) {
 		try {
 			sessionFactory = new Configuration().configure(resource).buildSessionFactory();
