@@ -4,16 +4,16 @@
 
 	<groupId>com.mingchao</groupId>
 	<artifactId>snsspider-core</artifactId>
-	<version>0.0.1</version>
+	<version>0.0.2-SNAPSHOT</version>
 	<name>snsspider-core</name>
 	<packaging>jar</packaging>
-	
+
 	<dependencyManagement>
 		<dependencies>
 			<dependency>
 				<groupId>com.mingchao</groupId>
 				<artifactId>snsspider-bom</artifactId>
-				<version>0.0.1</version>
+				<version>0.0.2-SNAPSHOT</version>
 				<type>pom</type>
 				<scope>import</scope>
 			</dependency>
@@ -21,6 +21,12 @@
 	</dependencyManagement>
 
 	<dependencies>
+		<!-- Hibernate-ogm -->
+		<dependency>
+			<groupId>org.hibernate.ogm</groupId>
+			<artifactId>hibernate-ogm-core</artifactId>
+		</dependency>
+		
 		<!-- Hibernate -->
 		<dependency>
 			<groupId>org.hibernate</groupId>
@@ -73,6 +79,12 @@
 			<artifactId>guava</artifactId>
 		</dependency>
 
+		<!-- apache commons -->
+		<dependency>
+			<groupId>org.apache.commons</groupId>
+			<artifactId>commons-lang3</artifactId>
+		</dependency>
+
 		<!-- log -->
 		<dependency>
 			<groupId>commons-logging</groupId>
@@ -84,16 +96,13 @@
 			<groupId>com.sun</groupId>
 			<artifactId>tools</artifactId>
 		</dependency>
-
-
-
-
-		<!-- jsoup -->
-		<dependency>
-			<groupId>org.jsoup</groupId>
-			<artifactId>jsoup</artifactId>
-			<version>1.8.3</version>
-		</dependency>
+		
+        <!-- jsoup -->
+        <dependency>
+            <groupId>org.jsoup</groupId>
+            <artifactId>jsoup</artifactId>
+            <version>1.8.3</version>
+        </dependency>
 
 		<!-- junit -->
 		<dependency>
