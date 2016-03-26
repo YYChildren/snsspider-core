@@ -1,13 +1,15 @@
-package com.mingchao.snsspider.http;
+package com.mingchao.snsspider.http.webdriver;
 
 import java.util.Iterator;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import org.openqa.selenium.WebDriver.Options;
 import org.openqa.selenium.remote.RemoteWebDriver;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
-import com.mingchao.snsspider.logging.Log;
-import com.mingchao.snsspider.logging.LogFactory;
+import com.mingchao.snsspider.http.cookie.CookieSns;
+import com.mingchao.snsspider.http.cookie.CookieSnsStore;
 
 public class WebDriverWrapper{
 	private Log log = LogFactory.getLog(this.getClass());

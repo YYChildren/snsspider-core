@@ -3,58 +3,68 @@ package com.mingchao.snsspider.storage;
 import java.io.Serializable;
 import java.util.List;
 
-import com.mingchao.snsspider.logging.Log;
-import com.mingchao.snsspider.logging.LogFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
-public class BaseStorage implements Storage{
+import com.mingchao.snsspider.exception.NotImplementedException;
+
+public class StorageAdaptor implements Storage{
 	
 	protected Log log = LogFactory.getLog(this.getClass());
 
 	@Override
 	public void insert(Object object) {
+		throw new NotImplementedException();
 	}
 
 	@Override
 	public void insert(List<?> list) {
+		throw new NotImplementedException();
 	}
 
 	@Override
 	public void insertIgnore(Object object) {
+		throw new NotImplementedException();
 	}
 
 	@Override
 	public void insertIgnore(List<?> list) {
+		throw new NotImplementedException();
 	}
 
 	@Override
 	public void insertDuplicate(Object object) {
+		throw new NotImplementedException();
 	}
 
 	@Override
 	public void insertDuplicate(List<?> list) {
+		throw new NotImplementedException();
 	}
 
 	@Override
 	public Object get(Class<?> c, Serializable id) {
-		return null;
+		throw new NotImplementedException();
 	}
 
 	@Override
 	public List<Object> get(Class<?> c, Serializable idStart, Serializable idEnd) {
-		return null;
+		throw new NotImplementedException();
 	}
 
 	@Override
 	public Boolean hasMore(Class<?> c, Serializable idStart) {
-		return null;
+		throw new NotImplementedException();
 	}
 
 	@Override
 	public void delete(Class<?> c, Serializable idStart, Serializable idEnd) {
+		throw new NotImplementedException();
 	}
 
 	@Override
 	public void close() {
+		throw new NotImplementedException();
 	}
 
 }

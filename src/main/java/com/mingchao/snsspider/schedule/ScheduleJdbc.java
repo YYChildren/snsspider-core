@@ -10,16 +10,15 @@ import com.google.common.hash.Funnel;
 import com.mingchao.snsspider.exception.NPInterruptedException;
 import com.mingchao.snsspider.model.IdAble;
 import com.mingchao.snsspider.model.QueueStatus;
-import com.mingchao.snsspider.storage.Storage;
-import com.mingchao.snsspider.storage.StorageJdbcLocal;
+import com.mingchao.snsspider.storage.db.StorageJdbc;
 import com.mingchao.snsspider.storage.util.SQLUtil;
 import com.mingchao.snsspider.util.BloomFilterUtil;
 
-public class ScheduleJdbc<T  extends IdAble> extends ScheduleImpl<T> {
+public class ScheduleJdbc<T  extends IdAble> extends ScheduleAdaptor<T> {
 	
 	protected static int STEP = 1000;
 	protected Queue<T> queue;
-	protected Storage storage;
+	protected StorageJdbc storage;
 	protected boolean waiting;
 	protected String entryTable;
 	private Class<? extends QueueStatus> queueStatusClass; 
@@ -46,11 +45,10 @@ public class ScheduleJdbc<T  extends IdAble> extends ScheduleImpl<T> {
 		this.filter = readFrom(funnel);
 		this.filter = filter == null ? BloomFilter.create(funnel, expectedEntries, fpp) : filter; 
 		waiting = false;
-		setStorage();
 	}
 
-	protected void setStorage() {
-		this.storage = StorageJdbcLocal.JDBC.getInstance();
+	public void setStorage(StorageJdbc storage) {
+		this.storage = storage;
 	}
 
 	public synchronized boolean containsKey(T e) {
@@ -149,6 +147,11 @@ public class ScheduleJdbc<T  extends IdAble> extends ScheduleImpl<T> {
 		}
 		e = (T) queue.poll();
 		return e;
+	}
+	
+	@Override
+	public void closing(){
+		log.info(this.getClass() + " for " + entryClass + "is closing");
 	}
 	
 	@Override

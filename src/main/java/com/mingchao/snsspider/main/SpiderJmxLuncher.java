@@ -18,8 +18,8 @@ import javax.management.remote.JMXConnectorFactory;
 import javax.management.remote.JMXServiceURL;
 
 import com.mingchao.snsspider.exception.SpiderLuncherException;
-import com.mingchao.snsspider.logging.Log;
-import com.mingchao.snsspider.logging.LogFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import com.mingchao.snsspider.util.Closeable;
 import com.sun.tools.attach.AgentInitializationException;
 import com.sun.tools.attach.AgentLoadException;

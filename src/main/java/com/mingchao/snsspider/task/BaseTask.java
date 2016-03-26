@@ -1,7 +1,7 @@
 package com.mingchao.snsspider.task;
 
-import com.mingchao.snsspider.logging.Log;
-import com.mingchao.snsspider.logging.LogFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 
 public class BaseTask implements Task{
 	protected Log log = LogFactory.getLog(this.getClass()); 

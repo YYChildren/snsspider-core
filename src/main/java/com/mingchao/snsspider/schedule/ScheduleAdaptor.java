@@ -12,10 +12,12 @@ import java.util.List;
 
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnel;
-import com.mingchao.snsspider.logging.Log;
-import com.mingchao.snsspider.logging.LogFactory;
+import com.mingchao.snsspider.exception.NotImplementedException;
 
-public abstract class ScheduleImpl<T> implements Schedule<T> {
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
+
+public abstract class ScheduleAdaptor<T> implements Schedule<T> {
 	
 	protected Log log = LogFactory.getLog(this.getClass());
 	protected Class<T> entryClass;
@@ -26,29 +28,32 @@ public abstract class ScheduleImpl<T> implements Schedule<T> {
 
 	@Override
 	public boolean containsKey(T e) {
-		return false;
+		throw new NotImplementedException();
 	}
 
 	@Override
 	public void schadule(List<T> list) {
+		throw new NotImplementedException();
 	}
 
 	@Override
 	public void schadule(T e) {
+		throw new NotImplementedException();
 	}
 
 	@Override
 	public void reschadule(T e) {
+		throw new NotImplementedException();
 	}
 
 	@Override
 	public T fetch() {
-		return null;
+		throw new NotImplementedException();
 	}
 
 	@Override
 	public void closing() {
-		closing = true;
+		throw new NotImplementedException();
 	}
 	
 	@Override
@@ -58,7 +63,7 @@ public abstract class ScheduleImpl<T> implements Schedule<T> {
 	
 	@Override
 	public void close() {
-		//TODO
+		throw new NotImplementedException();
 	}
 	
 	public void dumpFilter() {

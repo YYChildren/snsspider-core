@@ -14,13 +14,10 @@ import org.hibernate.criterion.Restrictions;
 
 import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnel;
-import com.mingchao.snsspider.exception.NPInterruptedException;
 import com.mingchao.snsspider.model.IdAble;
 import com.mingchao.snsspider.model.QueueStatus;
-import com.mingchao.snsspider.storage.StorageJdbcLocal;
-import com.mingchao.snsspider.storage.StorageMySQLMaster;
-import com.mingchao.snsspider.storage.jdbc.StorageMySQL;
-import com.mingchao.snsspider.storage.util.HibernateSql;
+import com.mingchao.snsspider.storage.db.StorageMySQL;
+import com.mingchao.snsspider.storage.util.HibernateExeTask;
 import com.mingchao.snsspider.storage.util.SQLUtil;
 import com.mingchao.snsspider.util.BloomFilterUtil;
 
@@ -32,13 +29,11 @@ import com.mingchao.snsspider.util.BloomFilterUtil;
  * @param <T>
  *            需要调度的结构
  */
-public class ScheduleDist<T extends IdAble> extends ScheduleImpl<T> {
+public class ScheduleDist<T extends IdAble> extends ScheduleAdaptor<T> {
 	protected static int STEP = 1000;
 
-	private StorageMySQL storageLocal = (StorageMySQL) StorageJdbcLocal.MySQL
-			.getInstance();
-	private StorageMySQL storageMaster = StorageMySQLMaster.INSTANCE
-			.getInstance();
+	private StorageMySQL storageSlave;
+	private StorageMySQL storageMaster;
 	private Queue<T> queue;
 	private String entryTable;
 	private Class<? extends QueueStatus> queueStatusClass;
@@ -76,6 +71,14 @@ public class ScheduleDist<T extends IdAble> extends ScheduleImpl<T> {
 		this.filter = readFrom(funnel);
 		this.filter = filter == null ? BloomFilter.create(funnel,
 				expectedEntries, fpp) : filter;
+	}
+	
+	public void setStorageSlave(StorageMySQL storageSlave) {
+		this.storageSlave = storageSlave;
+	}
+
+	public void setStorageMaster(StorageMySQL storageMaster) {
+		this.storageMaster = storageMaster;
 	}
 
 	@Override
@@ -121,7 +124,7 @@ public class ScheduleDist<T extends IdAble> extends ScheduleImpl<T> {
 		T e = null;
 		QueueStatus queueStatus = null;
 		if (queue.isEmpty()) {
-			queueStatus = (QueueStatus) storageLocal.get(queueStatusClass,
+			queueStatus = (QueueStatus) storageSlave.get(queueStatusClass,
 					entryTable);// 获取进度
 			if (queueStatus == null) {
 				try {
@@ -131,19 +134,19 @@ public class ScheduleDist<T extends IdAble> extends ScheduleImpl<T> {
 				}
 				queueStatus.setTableName(entryTable);
 				queueStatus.setIdEnd(1L);
-				storageLocal.insertDuplicate(queueStatus);
+				storageSlave.insertDuplicate(queueStatus);
 			}
 		}
 		while (queue.isEmpty()) {
 			Long idStart = queueStatus.getIdEnd();// 小于idStart的可以删除
 			Long idEnd = idStart + STEP;
 			queueStatus.setIdStart(idStart);
-			List<Object> list = storageLocal.get(entryClass, idStart, idEnd);
+			List<Object> list = storageSlave.get(entryClass, idStart, idEnd);
 			log.debug("idStart: " + idStart);
 			if (list == null || list.isEmpty()) {
 				log.debug(entryClass + " between " + idStart + " and " + idEnd
 						+ " is null");
-				if (storageLocal.hasMore(entryClass, idEnd)) {
+				if (storageSlave.hasMore(entryClass, idEnd)) {
 					log.debug("has more id: " + idEnd);
 					queueStatus.setIdEnd(idEnd);
 					continue;
@@ -159,7 +162,7 @@ public class ScheduleDist<T extends IdAble> extends ScheduleImpl<T> {
 				}
 				idEnd = ((IdAble) list.get(list.size() - 1)).getId() + 1;
 				queueStatus.setIdEnd(idEnd);
-				storageLocal.insertDuplicate(queueStatus);// 更新本地进度
+				storageSlave.insertDuplicate(queueStatus);// 更新本地进度
 			}
 		}
 		e = (T) queue.poll();
@@ -168,9 +171,9 @@ public class ScheduleDist<T extends IdAble> extends ScheduleImpl<T> {
 
 	@SuppressWarnings({ "unchecked" })
 	private boolean tryGetFromMaster() {
-		HibernateSql hs = new HibernateSql() {
+		HibernateExeTask hs = new HibernateExeTask() {
 			@Override
-			public Object execute(Session session) throws Exception {
+			public Object execute(Session session){
 				// 锁定一行
 				QueueStatus queueStatus = (QueueStatus) session.get(
 						queueStatusClass, entryTable, new LockOptions(
@@ -212,7 +215,7 @@ public class ScheduleDist<T extends IdAble> extends ScheduleImpl<T> {
 						}
 					} else {
 						// 将队列保存到本地数据库
-						storageLocal.insertIgnore(list);
+						storageSlave.insertIgnore(list);
 						idEnd = ((IdAble) list.get(list.size() - 1)).getId() + 1;
 						// 更新Master的进度信息
 						queueStatus.setIdEnd(idEnd);
@@ -223,17 +226,15 @@ public class ScheduleDist<T extends IdAble> extends ScheduleImpl<T> {
 				}
 			}
 		};
-		try {
-			return (boolean) storageMaster.execute(hs);
-		} catch (InterruptedException e) {
-			throw new NPInterruptedException(e);
-		} catch (Exception e) {
-			log.warn(e, e);
-			return false;
-		}
+		return (boolean) storageMaster.execute(hs);
+	}
+	
+	@Override
+	public void closing(){
+		log.info(this.getClass() + " for " + entryClass + "is closing");
 	}
 
-	// TODO 关闭前需要更改idEnd游标为队列最前坐标
+	// 关闭前需要更改idEnd游标为队列最前坐标
 	@Override
 	public void dump() {
 		super.dump();
@@ -245,7 +246,7 @@ public class ScheduleDist<T extends IdAble> extends ScheduleImpl<T> {
 				queueStatus = queueStatusClass.newInstance();
 				queueStatus.setTableName(entryTable);
 				queueStatus.setIdEnd(endId);
-				storageLocal.insertDuplicate(queueStatus);
+				storageSlave.insertDuplicate(queueStatus);
 			} catch (InstantiationException | IllegalAccessException e1) {// 不会出现该错误
 				log.warn(e1, e1);
 			}
@@ -254,8 +255,7 @@ public class ScheduleDist<T extends IdAble> extends ScheduleImpl<T> {
 
 	@Override
 	public void close() {
-		super.close();
 		storageMaster.close();
-		storageLocal.close();
+		storageSlave.close();
 	}
 }

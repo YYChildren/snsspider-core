@@ -1,4 +1,4 @@
-package com.mingchao.snsspider.http;
+package com.mingchao.snsspider.http.httpclient;
 
 import java.io.IOException;
 import java.util.Iterator;
@@ -11,21 +11,18 @@ import org.apache.http.cookie.Cookie;
 import org.apache.http.impl.client.CloseableHttpClient;
 import org.apache.http.impl.conn.PoolingHttpClientConnectionManager;
 
-public abstract class HttpResource {
-	protected String userAgent = "Mozilla/5.0 (Windows NT 6.1; WOW64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/47.0.2526.106 Safari/537.36";
-	protected int poolSize;
-	protected CookieStore cookieStore;
-	protected RequestConfig requestConfig;
-	protected PoolingHttpClientConnectionManager cm;
-	protected CloseableHttpClient httpclient;
-	protected Header[] baseHeaders;
+public class HttpClientPool {
+	private String userAgent;
+	private int poolSize;
+	private CookieStore cookieStore;
+	private RequestConfig requestConfig;
+	private PoolingHttpClientConnectionManager cm;
+	private CloseableHttpClient httpclient;
+	private Header[] baseHeaders;
 	
-	public HttpResource(){
-		init();
+	public HttpClientPool(){
 	}
 	
-	protected abstract void init();
-
 	public Header[] getBaseHeaders() {
 		return baseHeaders;
 	}

@@ -8,7 +8,7 @@ import com.google.common.hash.BloomFilter;
 import com.google.common.hash.Funnel;
 import com.mingchao.snsspider.util.BloomFilterUtil;
 
-public class ScheduleMem<T> extends ScheduleImpl<T> {
+public class ScheduleMem<T> extends ScheduleAdaptor<T> {
 
 	private Queue<T> queue;
 

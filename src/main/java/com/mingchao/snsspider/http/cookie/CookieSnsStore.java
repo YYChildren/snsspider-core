@@ -1,4 +1,4 @@
-package com.mingchao.snsspider.http;
+package com.mingchao.snsspider.http.cookie;
 
 import java.util.ArrayList;
 import java.util.Date;

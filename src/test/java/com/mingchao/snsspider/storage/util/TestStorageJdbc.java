@@ -3,12 +3,12 @@ package com.mingchao.snsspider.storage.util;
 import org.junit.Assert;
 import org.junit.Test;
 
-import com.mingchao.snsspider.model.UserKey;
+import com.mingchao.snsspider.model.TestUserKey;
 
 public class TestStorageJdbc {
 	@Test
 	public void test(){
-		UserKey uk = new UserKey();
+		TestUserKey uk = new TestUserKey();
 		Assert.assertTrue(SQLUtil.getTableName(uk).equals("t_user_key"));
 		Assert.assertTrue(SQLUtil.getInsertIgnoreSql(uk) == null);
 		Assert.assertTrue(SQLUtil.getInsertDuplicateSql(uk) == null);

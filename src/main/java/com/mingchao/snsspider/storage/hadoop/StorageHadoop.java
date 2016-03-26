@@ -15,10 +15,11 @@ import java.util.List;
 import java.util.Map;
 import java.util.Map.Entry;
 
+import com.mingchao.snsspider.exception.StorageException;
 import com.mingchao.snsspider.model.HadoopString;
-import com.mingchao.snsspider.storage.BaseStorage;
+import com.mingchao.snsspider.storage.StorageAdaptor;
 
-public class StorageHadoop extends BaseStorage {
+public class StorageHadoop extends StorageAdaptor {
 
 	private Map<String, PrintWriter> pwMap = new HashMap<String, PrintWriter>();
 
@@ -103,7 +104,7 @@ public class StorageHadoop extends BaseStorage {
 			pwMap.put(filename, pw);
 			return pw;
 		} catch (IOException e) {
-			throw new RuntimeException(e);
+			throw new StorageException(e);
 		}
 	}
 

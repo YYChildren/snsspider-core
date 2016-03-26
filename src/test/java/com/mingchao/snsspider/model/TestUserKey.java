@@ -6,7 +6,7 @@ import javax.persistence.GenerationType;
 import javax.persistence.Id;
 
 @Entity(name="t_user_key")
-public class UserKey extends HadoopString{
+public class TestUserKey extends HadoopString{
 	private Long id;
 	private Long qq;
 	private Boolean visitable;

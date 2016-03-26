@@ -1,4 +1,4 @@
-package com.mingchao.snsspider.http;
+package com.mingchao.snsspider.http.cookie;
 
 import java.io.Serializable;
 import java.lang.reflect.Field;

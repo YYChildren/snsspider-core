@@ -1,4 +1,5 @@
-package com.mingchao.snsspider.http;
+package com.mingchao.snsspider.http.webdriver;
+
 
 
 public interface SubmitTask<T>{

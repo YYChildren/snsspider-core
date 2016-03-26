@@ -1,48 +1,38 @@
-package com.mingchao.snsspider.http;
+package com.mingchao.snsspider.http.webdriver;
 
 import java.util.ArrayList;
 import java.util.LinkedList;
 import java.util.List;
 import java.util.Queue;
-import java.util.concurrent.TimeUnit;
 
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import org.openqa.selenium.TimeoutException;
 import org.openqa.selenium.WebDriverException;
-import org.openqa.selenium.chrome.ChromeDriver;
 import org.openqa.selenium.remote.RemoteWebDriver;
 
 import com.mingchao.snsspider.exception.WebDriverCosingException;
-import com.mingchao.snsspider.logging.Log;
-import com.mingchao.snsspider.logging.LogFactory;
+import com.mingchao.snsspider.exception.WebDriverInstantiationException;
 import com.mingchao.snsspider.util.Closeable;
 
 public class WebDriverPool implements Closeable {
 	public static final int DEFALT_SIZE = 1;
-	public static final Class<? extends RemoteWebDriver> DEFAULT_WEBDRIVERCLASS = ChromeDriver.class;
 
 	private Queue<WebDriverWrapper> webDrivers;
 	// 是否被使用
 	private List<WebDriverWrapper> webDriverList;
+	private WebDriverFactory webDriverFactory;
 	private int poolSize;
 	private int semaphore;
 	private boolean closing;
 	private Log log;
-	private Class<? extends RemoteWebDriver> webDriverClass;
 
-	public WebDriverPool() {
-		this(DEFAULT_WEBDRIVERCLASS);
-	}
-	
-	public WebDriverPool(int size){
-		this(DEFAULT_WEBDRIVERCLASS,DEFALT_SIZE);
-	}
-	
-	public WebDriverPool(Class<? extends RemoteWebDriver> webDriverClass){
-		this(webDriverClass,DEFALT_SIZE);
+	public WebDriverPool(WebDriverFactory webDriverFactory){
+		this(webDriverFactory,DEFALT_SIZE);
 	}
 
-	public WebDriverPool(Class<? extends RemoteWebDriver> webDriverClass, int size) {
-		this.webDriverClass = webDriverClass;
+	public WebDriverPool(WebDriverFactory webDriverFactory, int size) {
+		this.webDriverFactory = webDriverFactory;
 		this.poolSize = size;
 		this.semaphore = poolSize;
 		webDrivers = new LinkedList<WebDriverWrapper>();
@@ -73,27 +63,13 @@ public class WebDriverPool implements Closeable {
 			} catch (Exception e) {
 			}
 		}
-		RemoteWebDriver webDriver = newWebDriver();
-		webDriverWrapper.setWebDriver(webDriver);
-	}
-
-	private RemoteWebDriver newWebDriver() {
 		RemoteWebDriver webDriver = null;
 		try {
-			webDriver = webDriverClass.newInstance();
+			webDriver = webDriverFactory.createWebDriver();
 		} catch (InstantiationException | IllegalAccessException e) {
-			log.warn(e, e);
+			throw new WebDriverInstantiationException();
 		}
-		ensurePageLoad(webDriver);// 确保页面加载
-		return webDriver;
-	}
-
-	private void ensurePageLoad(RemoteWebDriver webDriver) {
-		// 等待元素出现
-		webDriver.manage().timeouts().setScriptTimeout(4, TimeUnit.SECONDS)
-				.implicitlyWait(4, TimeUnit.SECONDS)
-				.pageLoadTimeout(8, TimeUnit.SECONDS);
-		webDriver.manage().getCookies();
+		webDriverWrapper.setWebDriver(webDriver);
 	}
 
 	public <T> T submit(SubmitTask<T> getTask) throws InterruptedException {

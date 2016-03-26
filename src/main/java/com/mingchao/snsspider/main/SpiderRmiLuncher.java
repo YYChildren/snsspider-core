@@ -10,8 +10,8 @@ import java.rmi.registry.Registry;
 import java.rmi.server.UnicastRemoteObject;
 
 import com.mingchao.snsspider.exception.SpiderLuncherException;
-import com.mingchao.snsspider.logging.Log;
-import com.mingchao.snsspider.logging.LogFactory;
+import org.apache.commons.logging.Log;
+import org.apache.commons.logging.LogFactory;
 import com.mingchao.snsspider.util.Closeable;
 
 public class SpiderRmiLuncher  implements SpiderLuncher {
