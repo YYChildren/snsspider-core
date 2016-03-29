@@ -27,7 +27,9 @@ public class StorageDB extends StorageAdaptor {
 			public Object execute(Session session) {
 				for (Iterator<?> iterator = list.iterator(); iterator.hasNext();) {
 					Object object = iterator.next();
-					session.save(object);
+					if(object != null){
+						session.save(object);
+					}
 				}
 				return null;
 			}
@@ -53,7 +55,9 @@ public class StorageDB extends StorageAdaptor {
 			public Object execute(Session session) {
 				for (Iterator<?> iterator = list.iterator(); iterator.hasNext();) {
 					Object object = iterator.next();
-					session.saveOrUpdate(object);
+					if(object != null){
+						session.saveOrUpdate(object);
+					}
 				}
 				return null;
 			}
