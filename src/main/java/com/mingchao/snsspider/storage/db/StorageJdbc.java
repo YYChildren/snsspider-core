@@ -1,7 +1,6 @@
 package com.mingchao.snsspider.storage.db;
 
 import java.io.Serializable;
-import java.math.BigInteger;
 import java.util.List;
 
 import org.hibernate.Session;
@@ -57,12 +56,11 @@ public class StorageJdbc extends StorageDB {
 		HibernateExeTask hs = new HibernateExeTask() {
 			@Override
 			public Object execute(Session session) {
-				String queryString = SQLUtil.hasMoreSql(c, idStart);
-				BigInteger o = (BigInteger) session.createSQLQuery(queryString)
-						.uniqueResult();
-				log.debug("has more: " + o.getClass().getName() + "values: "
-						+ o);
-				return o.intValue() == 1;
+				String idField = SQLUtil.getIdFieldName(c);
+				List<?> rs = session.createCriteria(c)
+						.add(Restrictions.ge(idField, idStart))
+						.setMaxResults(1).list();
+				return !rs.isEmpty();
 			}
 		};
 		return (Boolean) hu.execute(hs);

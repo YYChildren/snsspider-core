@@ -204,15 +204,17 @@ public class ScheduleDist<T extends IdAble> extends ScheduleAdaptor<T> {
 
 					// 如果队列为空
 					if (list == null || list.isEmpty()) {
-						String moreSql = SQLUtil.hasMoreSql(entryClass, idEnd);
-						BigInteger o = (BigInteger) session.createSQLQuery(
-								moreSql).uniqueResult();
-						if (o.intValue() == 1) {// 如果有更多元素，继续
+						String idField = SQLUtil.getIdFieldName(entryClass);
+						List<?> rs = session.createCriteria(entryClass)
+								.add(Restrictions.ge(idField, idEnd))
+								.setMaxResults(1).list();
+						if(rs.isEmpty()){
+							return false;
+						}else{// 如果有更多元素，继续
 							queueStatus.setIdEnd(idEnd);
 							continue;
-						} else {
-							return false;
 						}
+						
 					} else {
 						// 将队列保存到本地数据库
 						storageSlave.insertIgnore(list);
