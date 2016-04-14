@@ -1,6 +1,5 @@
 package com.mingchao.snsspider.task;
 
-import com.mingchao.snsspider.exception.NPInterruptedException;
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
 
@@ -22,12 +21,10 @@ public class RunnableTask implements Runnable, Task {
 		try {
 			before();
 			execute();
-		} catch(NPInterruptedException e){
+		} catch(RuntimeException e){
 			log.warn(e,e);
-			Thread.currentThread().interrupt();
-		}catch (Exception e) {
-			log.warn(e,e);
-		} finally {
+			throw e;
+		}finally {
 			after();
 		}
 	}
@@ -38,7 +35,7 @@ public class RunnableTask implements Runnable, Task {
 	}
 
 	@Override
-	public void execute() throws Exception {
+	public void execute(){
 		task.execute();
 	}
 

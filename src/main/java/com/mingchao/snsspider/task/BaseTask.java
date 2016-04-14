@@ -11,7 +11,7 @@ public class BaseTask implements Task{
 	}
 
 	@Override
-	public void execute() throws Exception {
+	public void execute(){
 	}
 
 	@Override
